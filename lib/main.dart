@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:superheroes/pages/main_page.dart';
 
 void main() {
@@ -12,7 +13,9 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       theme: ThemeData(
-        primarySwatch: Colors.blue,
+        textTheme: GoogleFonts.openSansTextTheme(
+          Theme.of(context).textTheme, // If this is not set, then ThemeData.light().textTheme is used.
+        ),
       ),
       home: MainPage(),
     );

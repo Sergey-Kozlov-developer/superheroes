@@ -20,10 +20,12 @@ dependencies:
   cupertino_icons: ^1.0.2
   rxdart: ^0.27.3
   provider: ^6.0.2
+  google_fonts: ^2.3.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  network_image_mock: ^2.0.1
 
 
   flutter_lints: ^1.0.0
@@ -33,5 +35,8 @@ flutter:
 
 
   uses-material-design: true
+  assets:
+    - google_fonts/
+    - assets/images/
 
 
