@@ -241,7 +241,7 @@ class NothingFoundWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: InfoWithButton(
-        title: "Nofing found",
+        title: "Nothing found",
         subtitle: "Search for something else",
         buttonText: "Search",
         assetImage: SuperheroesImages.hulk,
