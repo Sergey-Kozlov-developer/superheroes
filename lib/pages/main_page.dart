@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:provider/provider.dart';
 import 'package:superheroes/blocs/main_bloc.dart';
 import 'package:superheroes/pages/superhero_page.dart';
@@ -41,7 +42,7 @@ class _MainPageState extends State<MainPage> {
 class MainPageContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final MainBloc bloc = Provider.of<MainBloc>(context);
+    final MainBloc bloc = Provider.of<MainBloc>(context, listen: false);
     return Stack(
       children: [
         MainPageStateWidget(),
@@ -52,7 +53,64 @@ class MainPageContent extends StatelessWidget {
             text: "Next state",
           ),
         ),
+        Padding(
+          padding: const EdgeInsets.only(left: 16, right: 16, top: 12),
+          child: SearchWidget(),
+        ),
       ],
+    );
+  }
+}
+
+class SearchWidget extends StatefulWidget {
+  @override
+  State<SearchWidget> createState() => _SearchWidgetState();
+}
+
+class _SearchWidgetState extends State<SearchWidget> {
+  // создаем контроллер, при нажатии на крестик очищает поле в TextField
+  final TextEditingController controller = TextEditingController();
+  // слушатель на изменение текста
+  @override
+  void initState() {
+    super.initState();
+    // вызов context и вызов bloc
+    SchedulerBinding.instance?.addPostFrameCallback((timeStamp) {
+      final MainBloc bloc = Provider.of<MainBloc>(context, listen: false);
+      controller.addListener(() => bloc.updateText(controller.text));
+    });
+    
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final MainBloc bloc = Provider.of<MainBloc>(context, listen: false);
+    return TextField(
+      controller: controller,
+      style: TextStyle(
+        fontWeight: FontWeight.w400,
+        fontSize: 20,
+        color: Colors.white,
+      ),
+      decoration: InputDecoration(
+          filled: true,
+          fillColor: SuperheroesColors.indigo75,
+          isDense: true,
+          prefixIcon: Icon(Icons.search, color: Colors.white54, size: 24),
+          suffix: GestureDetector(
+            onTap: () => controller.clear(),
+            child: Icon(
+              Icons.clear,
+              color: Colors.white,
+            ),
+          ),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide(color: Colors.white24),
+          )),
     );
   }
 }
@@ -60,7 +118,7 @@ class MainPageContent extends StatelessWidget {
 class MainPageStateWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final MainBloc bloc = Provider.of<MainBloc>(context);
+    final MainBloc bloc = Provider.of<MainBloc>(context, listen: false);
     return StreamBuilder<MainPageState>(
       stream: bloc.observeMainPageState(),
       builder: (context, snapshot) {
@@ -215,7 +273,6 @@ class SearchResultsWidget extends StatelessWidget {
   }
 }
 
-
 class NoFavoritesWidget extends StatelessWidget {
   const NoFavoritesWidget({Key? key}) : super(key: key);
 
@@ -234,6 +291,7 @@ class NoFavoritesWidget extends StatelessWidget {
     );
   }
 }
+
 class NothingFoundWidget extends StatelessWidget {
   const NothingFoundWidget({Key? key}) : super(key: key);
 
@@ -252,6 +310,7 @@ class NothingFoundWidget extends StatelessWidget {
     );
   }
 }
+
 class LoadingErrorWidget extends StatelessWidget {
   const LoadingErrorWidget({Key? key}) : super(key: key);
 
