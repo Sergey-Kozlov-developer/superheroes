@@ -24,26 +24,40 @@ class MainBloc {
 
   // чтобы слушать что происходит в currentTextSubject
   StreamSubscription? textSubscription;
+
   // слушатель поиска с сервера, вход в сеть
   StreamSubscription? searchSubscription;
 
   // общий доступ в bloc
   MainBloc() {
     stateSubject.add(MainPageState.noFavorites);
-    // подписываемся на что происходит в currentTextSubject
+    //1 подписываемся на что происходит в currentTextSubject
     // и исходя что ввели будем менять состояние экрана
-    textSubscription = currentTextSubject.listen((value) {
+    // distinct() чтобы при выборе тапом поиск лишний раз не передавалось
+    // печатание и также при нажатии на крестик
+    //2 комбинируем два стрима
+    textSubscription =
+        Rx.combineLatest2<String, List<SuperheroInfo>, MainPageStateInfo>(
+      currentTextSubject.distinct().debounceTime(Duration(milliseconds: 500)),
+      favoriteSuperheroesSubject,
+      (searchedText, favorites) =>
+          MainPageStateInfo(searchedText, favorites.isNotEmpty),
+    ).listen((value) {
       // отменить предыдущий запрос поиска, отменой подписки
       searchSubscription?.cancel();
-      if (value.isEmpty) {
-        // если пустое значение показываем экран favorites
-        stateSubject.add(MainPageState.favorites);
-      } else if (value.length < minSymbols) {
+      if (value.searchText.isEmpty) {
+        if (value.haveFavorites) {
+          // если пустое значение показываем экран favorites
+          stateSubject.add(MainPageState.favorites);
+        } else {
+          stateSubject.add(MainPageState.noFavorites);
+        }
+      } else if (value.searchText.length < minSymbols) {
         // если длина меньше трех показываем экран minSymbols
         stateSubject.add(MainPageState.minSymbols);
       } else {
         // в остальных случаях выполнить поиск на сервере
-        searchForSuperheroes(value);
+        searchForSuperheroes(value.searchText);
       }
     });
   }
@@ -60,16 +74,17 @@ class MainBloc {
         searchedSuperheroesSubject.add(searchResults);
         stateSubject.add(MainPageState.searchResults);
       }
-    }, onError: (error, stackTrace){
+    }, onError: (error, stackTrace) {
       stateSubject.add(MainPageState.loadingError);
     });
   }
+
   // методы для подписки из UI
-  Stream<List<SuperheroInfo>> observeFavoritesSuperheroes() => favoriteSuperheroesSubject;
+  Stream<List<SuperheroInfo>> observeFavoritesSuperheroes() =>
+      favoriteSuperheroesSubject;
 
-  Stream<List<SuperheroInfo>> observeSearchedSuperheroes() => searchedSuperheroesSubject;
-
-
+  Stream<List<SuperheroInfo>> observeSearchedSuperheroes() =>
+      searchedSuperheroesSubject;
 
   Future<List<SuperheroInfo>> search(final String text) async {
     // вывод loading индикатором перед отображением результата поиска
@@ -167,4 +182,27 @@ class SuperheroInfo {
       imageUrl: "https://www.superherodb.com/pictures2/portraits/10/100/22.jpg",
     ),
   ];
+}
+
+class MainPageStateInfo {
+  final String searchText;
+  final bool haveFavorites;
+
+  const MainPageStateInfo(this.searchText, this.haveFavorites);
+
+  @override
+  String toString() {
+    return 'MainPageStateInfo{searchText: $searchText, haveFavorites: $haveFavorites}';
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is MainPageStateInfo &&
+          runtimeType == other.runtimeType &&
+          searchText == other.searchText &&
+          haveFavorites == other.haveFavorites;
+
+  @override
+  int get hashCode => searchText.hashCode ^ haveFavorites.hashCode;
 }
