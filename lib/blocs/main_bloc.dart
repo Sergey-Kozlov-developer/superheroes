@@ -89,8 +89,12 @@ class MainBloc {
   Future<List<SuperheroInfo>> search(final String text) async {
     // вывод loading индикатором перед отображением результата поиска
     await Future.delayed(Duration(seconds: 1));
+    // ввод без учета регистра
     // возвращаем список по введенному запросу
-    return SuperheroInfo.mocked;
+    return SuperheroInfo.mocked
+        .where((superheroInfo) =>
+            superheroInfo.name.toLowerCase().contains(text.toLowerCase()))
+        .toList();
   }
 
   // подписка на главный слушатель(используется везде)

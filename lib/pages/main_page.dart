@@ -76,9 +76,11 @@ class _SearchWidgetState extends State<SearchWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final MainBloc bloc = Provider.of<MainBloc>(context, listen: false);
     return TextField(
       controller: controller,
+      cursorColor: Colors.white,
+      textInputAction: TextInputAction.search,
+      textCapitalization: TextCapitalization.words,
       style: TextStyle(
         fontWeight: FontWeight.w400,
         fontSize: 20,
@@ -91,13 +93,14 @@ class _SearchWidgetState extends State<SearchWidget> {
           prefixIcon: Icon(Icons.search, color: Colors.white54, size: 24),
           suffix: GestureDetector(
             onTap: () => controller.clear(),
-            child: Icon(
-              Icons.clear,
-              color: Colors.white,
-            ),
+            child: Icon(Icons.clear, color: Colors.white),
           ),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide(color: Colors.white, width: 2),
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8),
@@ -126,12 +129,12 @@ class MainPageStateWidget extends StatelessWidget {
           case MainPageState.noFavorites:
             return NoFavoritesWidget();
           case MainPageState.favorites:
-            return SuperheroList(
+            return SuperheroesList(
               title: "Your favorites",
               stream: bloc.observeFavoritesSuperheroes(),
             );
           case MainPageState.searchResults:
-            return SuperheroList(
+            return SuperheroesList(
               title: "Search results",
               stream: bloc.observeSearchedSuperheroes(),
             );
@@ -153,15 +156,13 @@ class MainPageStateWidget extends StatelessWidget {
   }
 }
 
-
-
-class SuperheroList extends StatelessWidget {
+class SuperheroesList extends StatelessWidget {
   final String title;
 
   // откуда получать данные(слушатель)
   final Stream<List<SuperheroInfo>> stream;
 
-  const SuperheroList({
+  const SuperheroesList({
     Key? key,
     required this.title,
     required this.stream,
@@ -177,11 +178,13 @@ class SuperheroList extends StatelessWidget {
           }
           final List<SuperheroInfo> superheroes = snapshot.data!;
           return ListView.separated(
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
             itemCount: superheroes.length + 1,
             itemBuilder: (BuildContext context, int index) {
               if (index == 0) {
                 return Padding(
-                  padding: const EdgeInsets.only(left: 16, right: 16, top: 90, bottom: 12),
+                  padding: const EdgeInsets.only(
+                      left: 16, right: 16, top: 90, bottom: 12),
                   child: Text(
                     title,
                     style: TextStyle(
@@ -196,9 +199,7 @@ class SuperheroList extends StatelessWidget {
               return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: SuperheroCard(
-                  name: item.name,
-                  realName: item.realName,
-                  imageUrl: item.imageUrl,
+                  superheroInfo: item,
                   onTap: () {
                     Navigator.of(context).push(
                       MaterialPageRoute(
@@ -208,9 +209,10 @@ class SuperheroList extends StatelessWidget {
                   },
                 ),
               );
-            }, separatorBuilder: (BuildContext context, int index) {
+            },
+            separatorBuilder: (BuildContext context, int index) {
               return const SizedBox(height: 8);
-          },
+            },
           );
         });
   }
