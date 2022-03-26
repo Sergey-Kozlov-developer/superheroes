@@ -60,6 +60,8 @@ class SearchWidget extends StatefulWidget {
 }
 
 class _SearchWidgetState extends State<SearchWidget> {
+  bool haveSearchText = false;
+
   // создаем контроллер, при нажатии на крестик очищает поле в TextField
   final TextEditingController controller = TextEditingController();
 
@@ -70,7 +72,15 @@ class _SearchWidgetState extends State<SearchWidget> {
     // вызов context и вызов bloc
     SchedulerBinding.instance?.addPostFrameCallback((timeStamp) {
       final MainBloc bloc = Provider.of<MainBloc>(context, listen: false);
-      controller.addListener(() => bloc.updateText(controller.text));
+      controller.addListener(() {
+        bloc.updateText(controller.text);
+        final haveText = controller.text.isNotEmpty;
+        if (haveSearchText != haveText) {
+          setState(() {
+            haveSearchText = haveText;
+          });
+        }
+      });
     });
   }
 
@@ -104,7 +114,9 @@ class _SearchWidgetState extends State<SearchWidget> {
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide(color: Colors.white24),
+            borderSide: haveSearchText
+                ? BorderSide(color: Colors.white, width: 2)
+                : BorderSide(color: Colors.white24),
           )),
     );
   }
@@ -127,11 +139,33 @@ class MainPageStateWidget extends StatelessWidget {
           case MainPageState.minSymbols:
             return MinSymbolsWidget();
           case MainPageState.noFavorites:
-            return NoFavoritesWidget();
+            return Stack(
+              children: [
+                NoFavoritesWidget(),
+                Align(
+                  alignment: Alignment.bottomCenter,
+                  child: ActionButton(
+                    text: "Remove",
+                    onTap: () => bloc.removeFavorite(),
+                  ),
+                ),
+              ],
+            );
           case MainPageState.favorites:
-            return SuperheroesList(
-              title: "Your favorites",
-              stream: bloc.observeFavoritesSuperheroes(),
+            return Stack(
+              children: [
+                SuperheroesList(
+                  title: "Your favorites",
+                  stream: bloc.observeFavoritesSuperheroes(),
+                ),
+                Align(
+                  alignment: Alignment.bottomCenter,
+                  child: ActionButton(
+                    text: "Remove",
+                    onTap: () => bloc.removeFavorite(),
+                  ),
+                ),
+              ],
             );
           case MainPageState.searchResults:
             return SuperheroesList(

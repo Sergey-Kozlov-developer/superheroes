@@ -101,6 +101,17 @@ class MainBloc {
   // с помощью него делаем подписки и выводы
   Stream<MainPageState> observeMainPageState() => stateSubject;
 
+  void removeFavorite() {
+    final List<SuperheroInfo> currentFavorites =
+        favoriteSuperheroesSubject.value;
+    if (currentFavorites.isNotEmpty) {
+      favoriteSuperheroesSubject.add(SuperheroInfo.mocked);
+    } else {
+      favoriteSuperheroesSubject.add(
+          currentFavorites.sublist(0, currentFavorites.length - 1));
+    }
+  }
+
   // обработка нажатия кнопки NEXT STATE in main_page
   void nextState() {
     // add new value to stateController
