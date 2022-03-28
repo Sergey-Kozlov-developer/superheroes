@@ -164,7 +164,9 @@ class SuperheroInfo {
   @override
   String toString() {
     return 'SuperheroInfo{name: $name, realName: $realName, imageUrl: $imageUrl}';
-  } // переопределение, сравнивание объектов по контенту(поиск)
+  }
+
+  // переопределение, сравнивание объектов по контенту(поиск)
 
   @override
   bool operator ==(Object other) =>
