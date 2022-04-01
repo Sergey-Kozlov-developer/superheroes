@@ -1,7 +1,11 @@
 import 'dart:async';
+import 'dart:convert';
 
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:rxdart/subjects.dart';
+import 'package:http/http.dart' as http;
+import 'package:superheroes/model/superhero.dart';
 
 class MainBloc {
   // минимальное кол-во введенных символов в поиске
@@ -28,8 +32,10 @@ class MainBloc {
   // слушатель поиска с сервера, вход в сеть
   StreamSubscription? searchSubscription;
 
+  // HTTP
+  http.Client? client;
   // общий доступ в bloc
-  MainBloc() {
+  MainBloc({this.client}) {
     stateSubject.add(MainPageState.noFavorites);
     //1 подписываемся на что происходит в currentTextSubject
     // и исходя что ввели будем менять состояние экрана
@@ -88,14 +94,45 @@ class MainBloc {
 
   Future<List<SuperheroInfo>> search(final String text) async {
     // вывод loading индикатором перед отображением результата поиска
-    await Future.delayed(Duration(seconds: 1));
-    // ввод без учета регистра
-    // возвращаем список по введенному запросу
-    return SuperheroInfo.mocked
-        .where((superheroInfo) =>
-            superheroInfo.name.toLowerCase().contains(text.toLowerCase()))
-        .toList();
+    // HTTP
+    final token = dotenv.env["SUPERHERO_TOKEN"];
+    // если client null то создаем новый запрос и присваиваем его в client
+    final response = await (client ??= http.Client())
+        .get(Uri.parse("https://superheroapi.com/api/$token/search/$text"));
+    // раскодируем пришедшие данные из сервера
+    final decoded = json.decode(response.body);
+    print(decoded);
+
+    // все данные берутся из API.
+    if (decoded['response'] == 'success') {
+      final List<dynamic> results = decoded['results'];
+      final List<Superhero> superheroes = results
+          .map((rawSuperhero) => Superhero.fromJson(rawSuperhero))
+          .toList();
+      final List<SuperheroInfo> found = superheroes.map((superhero) {
+        return SuperheroInfo(
+          name: superhero.name,
+          realName: superhero.biography.fullName,
+          imageUrl: superhero.image.url,
+        );
+      }).toList();
+      return found;
+    } else if (decoded['response'] == 'error') {
+      if (decoded['error'] == 'character with given name not found') {
+        return [];
+      }
+    }
+    // при ошибке выводим ошибку
+    throw Exception("Unknown error happened");
   }
+
+  // ввод без учета регистра
+  // возвращаем список по введенному запросу
+  // в этом нет необходимости при созданном сетевом запросе
+  // return SuperheroInfo.mocked
+  //     .where((superheroInfo) =>
+  //         superheroInfo.name.toLowerCase().contains(text.toLowerCase()))
+  //     .toList();
 
   // подписка на главный слушатель(используется везде)
   // с помощью него делаем подписки и выводы
@@ -107,8 +144,8 @@ class MainBloc {
     if (currentFavorites.isNotEmpty) {
       favoriteSuperheroesSubject.add(SuperheroInfo.mocked);
     } else {
-      favoriteSuperheroesSubject.add(
-          currentFavorites.sublist(0, currentFavorites.length - 1));
+      favoriteSuperheroesSubject
+          .add(currentFavorites.sublist(0, currentFavorites.length - 1));
     }
   }
 
@@ -136,6 +173,8 @@ class MainBloc {
     currentTextSubject.close();
 
     textSubscription?.cancel();
+
+    client?.close();
   }
 }
 
