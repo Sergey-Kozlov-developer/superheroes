@@ -108,10 +108,10 @@ class MainBloc {
 
     // обработка ошибок от сервера
     if (response.statusCode >= 500 && response.statusCode <= 599) {
-      throw ApiException("Server error happened");
+      throw ApiException("Server error hapened");
     }
     if (response.statusCode >= 400 && response.statusCode <= 499) {
-      throw ApiException("Client error happened");
+      throw ApiException("Client error hapened");
     }
     // раскодируем пришедшие данные из сервера
     final decoded = json.decode(response.body);
@@ -135,10 +135,10 @@ class MainBloc {
       if (decoded['error'] == 'character with given name not found') {
         return [];
       }
-      throw ApiException("Client error happened");
+      throw ApiException("Client error hapened");
     }
     // при ошибке выводим ошибку
-    throw Exception("Unknown error happened");
+    throw Exception("Unknown error hapened");
   }
 
   // ввод без учета регистра
