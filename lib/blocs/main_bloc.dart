@@ -5,6 +5,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:rxdart/subjects.dart';
 import 'package:http/http.dart' as http;
+import 'package:superheroes/exception/api_exception.dart';
 import 'package:superheroes/model/superhero.dart';
 
 class MainBloc {
@@ -85,6 +86,11 @@ class MainBloc {
     });
   }
 
+  void retry() {
+    final currentText = currentTextSubject.value;
+    searchForSuperheroes(currentText);
+  }
+
   // методы для подписки из UI
   Stream<List<SuperheroInfo>> observeFavoritesSuperheroes() =>
       favoriteSuperheroesSubject;
@@ -99,6 +105,14 @@ class MainBloc {
     // если client null то создаем новый запрос и присваиваем его в client
     final response = await (client ??= http.Client())
         .get(Uri.parse("https://superheroapi.com/api/$token/search/$text"));
+
+    // обработка ошибок от сервера
+    if (response.statusCode >= 500 && response.statusCode <= 599) {
+      throw ApiException("Server error happened");
+    }
+    if (response.statusCode >= 400 && response.statusCode <= 499) {
+      throw ApiException("Client error happened");
+    }
     // раскодируем пришедшие данные из сервера
     final decoded = json.decode(response.body);
     print(decoded);
@@ -121,6 +135,7 @@ class MainBloc {
       if (decoded['error'] == 'character with given name not found') {
         return [];
       }
+      throw ApiException("Client error happened");
     }
     // при ошибке выводим ошибку
     throw Exception("Unknown error happened");
