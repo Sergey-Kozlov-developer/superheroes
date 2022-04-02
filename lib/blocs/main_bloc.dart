@@ -108,10 +108,10 @@ class MainBloc {
 
     // обработка ошибок от сервера
     if (response.statusCode >= 500 && response.statusCode <= 599) {
-      throw ApiException("Server error hapened");
+      throw ApiException("Server error happened");
     }
     if (response.statusCode >= 400 && response.statusCode <= 499) {
-      throw ApiException("Client error hapened");
+      throw ApiException("Client error happened");
     }
     // раскодируем пришедшие данные из сервера
     final decoded = json.decode(response.body);
@@ -135,10 +135,10 @@ class MainBloc {
       if (decoded['error'] == 'character with given name not found') {
         return [];
       }
-      throw ApiException("Client error hapened");
+      throw ApiException("Client error happened");
     }
     // при ошибке выводим ошибку
-    throw Exception("Unknown error hapened");
+    throw Exception("Unknown error happened");
   }
 
   // ввод без учета регистра
@@ -156,7 +156,7 @@ class MainBloc {
   void removeFavorite() {
     final List<SuperheroInfo> currentFavorites =
         favoriteSuperheroesSubject.value;
-    if (currentFavorites.isNotEmpty) {
+    if (currentFavorites.isEmpty) {
       favoriteSuperheroesSubject.add(SuperheroInfo.mocked);
     } else {
       favoriteSuperheroesSubject
