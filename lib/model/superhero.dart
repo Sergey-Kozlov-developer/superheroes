@@ -22,8 +22,10 @@ class Superhero {
     required this.powerstats,
   });
 
+
   factory Superhero.fromJson(final Map<String, dynamic> json) =>
       _$SuperheroFromJson(json);
 
   Map<String, dynamic> toJson() => _$SuperheroToJson(this);
+
 }

@@ -108,10 +108,10 @@ class MainBloc {
 
     // обработка ошибок от сервера
     if (response.statusCode >= 500 && response.statusCode <= 599) {
-      throw ApiException("Server error hapened");
+      throw ApiException("Server error happened");
     }
     if (response.statusCode >= 400 && response.statusCode <= 499) {
-      throw ApiException("Client error hapened");
+      throw ApiException("Client error happened");
     }
     // раскодируем пришедшие данные из сервера
     final decoded = json.decode(response.body);
@@ -125,6 +125,7 @@ class MainBloc {
           .toList();
       final List<SuperheroInfo> found = superheroes.map((superhero) {
         return SuperheroInfo(
+          id: superhero.id,
           name: superhero.name,
           realName: superhero.biography.fullName,
           imageUrl: superhero.image.url,
@@ -135,10 +136,10 @@ class MainBloc {
       if (decoded['error'] == 'character with given name not found') {
         return [];
       }
-      throw ApiException("Client error hapened");
+      throw ApiException("Client error happened");
     }
     // при ошибке выводим ошибку
-    throw Exception("Unknown error hapened");
+    throw Exception("Unknown error happened");
   }
 
   // ввод без учета регистра
@@ -205,49 +206,53 @@ enum MainPageState {
 
 // создание модели для супегероев
 class SuperheroInfo {
+  final String id;
   final String name;
   final String realName;
   final String imageUrl;
 
   const SuperheroInfo({
+    required this.id,
     required this.name,
     required this.realName,
     required this.imageUrl,
   });
 
+
   @override
   String toString() {
-    return 'SuperheroInfo{name: $name, realName: $realName, imageUrl: $imageUrl}';
+    return 'SuperheroInfo{id: $id, name: $name, realName: $realName, imageUrl: $imageUrl}';
   }
 
-  // переопределение, сравнивание объектов по контенту(поиск)
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is SuperheroInfo &&
-          runtimeType == other.runtimeType &&
-          name == other.name &&
-          realName == other.realName &&
-          imageUrl == other.imageUrl;
+          other is SuperheroInfo && runtimeType == other.runtimeType &&
+              id == other.id && name == other.name &&
+              realName == other.realName && imageUrl == other.imageUrl;
 
   @override
-  int get hashCode => name.hashCode ^ realName.hashCode ^ imageUrl.hashCode;
+  int get hashCode =>
+      id.hashCode ^ name.hashCode ^ realName.hashCode ^ imageUrl.hashCode;
 
   // для получения данных из API, коллекция супергероев
   static const mocked = [
     SuperheroInfo(
+      id: "70",
       name: "Batman",
       realName: "Bruce Wayne",
       imageUrl:
           "https://www.superherodb.com/pictures2/portraits/10/100/639.jpg",
     ),
     SuperheroInfo(
+      id: "732",
       name: "Ironman",
       realName: "Tony Stark",
       imageUrl: "https://www.superherodb.com/pictures2/portraits/10/100/85.jpg",
     ),
     SuperheroInfo(
+      id: "687",
       name: "Venom",
       realName: "Eddie Brock",
       imageUrl: "https://www.superherodb.com/pictures2/portraits/10/100/22.jpg",
