@@ -9,9 +9,9 @@ import 'package:superheroes/model/powerstats.dart';
 import 'package:superheroes/model/server_image.dart';
 import 'package:superheroes/model/superhero.dart';
 import 'package:superheroes/resources/superheroes_colors.dart';
+import 'package:superheroes/resources/superheroes_icons.dart';
 import 'package:superheroes/widgets/action_button.dart';
 import 'package:http/http.dart' as http;
-
 
 class SuperheroPage extends StatefulWidget {
   final http.Client? client;
@@ -51,47 +51,33 @@ class _SuperheroPageState extends State<SuperheroPage> {
 }
 
 class SuperheroContentPage extends StatelessWidget {
-
   @override
   Widget build(BuildContext context) {
-    // для теста создаем героя
-    final superhero = Superhero(
-      id: "70",
-      name: "Batman",
-      biography: Biography(
-        fullName: "Batman Anatolievich",
-        alignment: "good",
-        aliases: ["Batmanovich", "Protector of the Realm"],
-        placeOfBirth: "Russia, St. Petersburg",
-      ),
-      image: ServerImage(
-        "https://www.superherodb.com/pictures2/portraits/10/100/639.jpg",
-      ),
-      powerstats: Powerstats(
-        intelligence: "90",
-        strength: "80",
-        speed: "15",
-        durability: "45",
-        power: "100",
-        combat: "0",
-      ),
-    );
-    return CustomScrollView(
-        slivers: [
-          SuperheroAppBar(superhero: superhero),
-          SliverToBoxAdapter(
-            child: Column(
-              children: [
-                const SizedBox(height: 30),
-                if (superhero.powerstats.isNotNull())
-                  PowerstatsWidget(powerstats: superhero.powerstats),
-                BiographyWidget(biography: superhero.biography),
-              ],
+    final bloc = Provider.of<SuperheroBloc>(context, listen: false);
+    return StreamBuilder<Superhero>(
+      stream: bloc.observeSuperhero(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData || snapshot.data == null) {
+          return const SizedBox.shrink();
+        }
+        final superhero = snapshot.data!;
+        return CustomScrollView(
+          slivers: [
+            SuperheroAppBar(superhero: superhero),
+            SliverToBoxAdapter(
+              child: Column(
+                children: [
+                  const SizedBox(height: 30),
+                  if (superhero.powerstats.isNotNull())
+                    PowerstatsWidget(powerstats: superhero.powerstats),
+                  BiographyWidget(biography: superhero.biography),
+                ],
+              ),
             ),
-          ),
-        ],
-      );
-
+          ],
+        );
+      },
+    );
   }
 }
 
@@ -105,11 +91,15 @@ class SuperheroAppBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+
     return SliverAppBar(
       stretch: true,
       pinned: true,
       floating: true,
       expandedHeight: 348,
+      actions: [
+        FavoriteButton(),
+      ],
       backgroundColor: SuperheroesColors.background,
       flexibleSpace: FlexibleSpaceBar(
         title: Text(
@@ -126,6 +116,39 @@ class SuperheroAppBar extends StatelessWidget {
           fit: BoxFit.cover,
         ),
       ),
+    );
+  }
+}
+
+class FavoriteButton extends StatelessWidget {
+
+
+  @override
+  Widget build(BuildContext context) {
+    final bloc = Provider.of<SuperheroBloc>(context, listen: false);
+    return StreamBuilder<bool>(
+      stream: bloc.observeIsFavorite(),
+      initialData: false,
+      builder: (context, snapshot) {
+        final favorite =
+            !snapshot.hasData || snapshot.data == null || snapshot.data!;
+        return GestureDetector(
+          onTap: () =>
+              favorite ? bloc.removeFromFavorites() : bloc.addToFavorite(),
+          child: Container(
+            height: 52,
+            width: 52,
+            alignment: Alignment.center,
+            child: Image.asset(
+              favorite
+                  ? SuperheroesIcons.starFilled
+                  : SuperheroesIcons.starEmpty,
+              height: 32,
+              width: 32,
+            ),
+          ),
+        );
+      },
     );
   }
 }

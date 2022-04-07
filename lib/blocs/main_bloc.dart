@@ -6,6 +6,8 @@ import 'package:rxdart/rxdart.dart';
 import 'package:rxdart/subjects.dart';
 import 'package:http/http.dart' as http;
 import 'package:superheroes/exception/api_exception.dart';
+import 'package:superheroes/favorite_superheroes_storage.dart';
+import 'package:superheroes/model/alignment_info.dart';
 import 'package:superheroes/model/superhero.dart';
 
 class MainBloc {
@@ -17,10 +19,6 @@ class MainBloc {
   final BehaviorSubject<MainPageState> stateSubject = BehaviorSubject();
 
   // инфа о героях, котороя будет передаваться в UI
-  // Для избранного
-  final favoriteSuperheroesSubject =
-      BehaviorSubject<List<SuperheroInfo>>.seeded(SuperheroInfo.mocked);
-
   // для поиска
   final searchedSuperheroesSubject = BehaviorSubject<List<SuperheroInfo>>();
 
@@ -33,20 +31,23 @@ class MainBloc {
   // слушатель поиска с сервера, вход в сеть
   StreamSubscription? searchSubscription;
 
+  // удаление в избранном
+  StreamSubscription? removeFromFavoriteSubscription;
+
   // HTTP
   http.Client? client;
+
   // общий доступ в bloc
   MainBloc({this.client}) {
-    stateSubject.add(MainPageState.noFavorites);
     //1 подписываемся на что происходит в currentTextSubject
     // и исходя что ввели будем менять состояние экрана
     // distinct() чтобы при выборе тапом поиск лишний раз не передавалось
     // печатание и также при нажатии на крестик
     //2 комбинируем два стрима
     textSubscription =
-        Rx.combineLatest2<String, List<SuperheroInfo>, MainPageStateInfo>(
+        Rx.combineLatest2<String, List<Superhero>, MainPageStateInfo>(
       currentTextSubject.distinct().debounceTime(Duration(milliseconds: 500)),
-      favoriteSuperheroesSubject,
+      FavoriteSuperheroesStorage.getInstance().observeFavoriteSuperheroes(),
       (searchedText, favorites) =>
           MainPageStateInfo(searchedText, favorites.isNotEmpty),
     ).listen((value) {
@@ -86,14 +87,37 @@ class MainBloc {
     });
   }
 
+  // удаление из избранного через Dismissible
+  void removeFromFavorites(final String id) {
+    removeFromFavoriteSubscription?.cancel();
+    removeFromFavoriteSubscription = FavoriteSuperheroesStorage.getInstance()
+        .removeFromFavorites(id)
+        .asStream()
+        .listen(
+          (event) {
+        print("Removed from favorites: $event");
+      },
+      onError: (error, stackTrace) =>
+          print("Error happened in removeFromFavorites: $error, $stackTrace"),
+    );
+  }
+
   void retry() {
     final currentText = currentTextSubject.value;
     searchForSuperheroes(currentText);
   }
 
   // методы для подписки из UI
-  Stream<List<SuperheroInfo>> observeFavoritesSuperheroes() =>
-      favoriteSuperheroesSubject;
+  /*
+  обсервим в реальности супергероев которые сохраненны
+  */
+  Stream<List<SuperheroInfo>> observeFavoritesSuperheroes() {
+    return FavoriteSuperheroesStorage.getInstance()
+        .observeFavoriteSuperheroes()
+        .map((superheroes) => superheroes
+            .map((superhero) => SuperheroInfo.fromSuperhero(superhero))
+            .toList());
+  }
 
   Stream<List<SuperheroInfo>> observeSearchedSuperheroes() =>
       searchedSuperheroesSubject;
@@ -124,12 +148,7 @@ class MainBloc {
           .map((rawSuperhero) => Superhero.fromJson(rawSuperhero))
           .toList();
       final List<SuperheroInfo> found = superheroes.map((superhero) {
-        return SuperheroInfo(
-          id: superhero.id,
-          name: superhero.name,
-          realName: superhero.biography.fullName,
-          imageUrl: superhero.image.url,
-        );
+        return SuperheroInfo.fromSuperhero(superhero);
       }).toList();
       return found;
     } else if (decoded['response'] == 'error') {
@@ -142,28 +161,9 @@ class MainBloc {
     throw Exception("Unknown error happened");
   }
 
-  // ввод без учета регистра
-  // возвращаем список по введенному запросу
-  // в этом нет необходимости при созданном сетевом запросе
-  // return SuperheroInfo.mocked
-  //     .where((superheroInfo) =>
-  //         superheroInfo.name.toLowerCase().contains(text.toLowerCase()))
-  //     .toList();
-
   // подписка на главный слушатель(используется везде)
   // с помощью него делаем подписки и выводы
   Stream<MainPageState> observeMainPageState() => stateSubject;
-
-  void removeFavorite() {
-    final List<SuperheroInfo> currentFavorites =
-        favoriteSuperheroesSubject.value;
-    if (currentFavorites.isEmpty) {
-      favoriteSuperheroesSubject.add(SuperheroInfo.mocked);
-    } else {
-      favoriteSuperheroesSubject
-          .add(currentFavorites.sublist(0, currentFavorites.length - 1));
-    }
-  }
 
   // обработка нажатия кнопки NEXT STATE in main_page
   void nextState() {
@@ -184,11 +184,14 @@ class MainBloc {
   // освобождение ресурсов, закрыть контроллер
   void dispose() {
     stateSubject.close();
-    favoriteSuperheroesSubject.close();
     searchedSuperheroesSubject.close();
     currentTextSubject.close();
 
     textSubscription?.cancel();
+    searchSubscription?.cancel();
+
+    removeFromFavoriteSubscription?.cancel();
+
 
     client?.close();
   }
@@ -210,27 +213,40 @@ class SuperheroInfo {
   final String name;
   final String realName;
   final String imageUrl;
+  final AlignmentInfo? alignmentInfo;
 
   const SuperheroInfo({
     required this.id,
     required this.name,
     required this.realName,
     required this.imageUrl,
+    this.alignmentInfo,
   });
 
+  factory SuperheroInfo.fromSuperhero(final Superhero superhero) {
+    return SuperheroInfo(
+      id: superhero.id,
+      name: superhero.name,
+      realName: superhero.biography.fullName,
+      imageUrl: superhero.image.url,
+      alignmentInfo: superhero.biography.alignmentInfo,
+    );
+  }
 
   @override
   String toString() {
     return 'SuperheroInfo{id: $id, name: $name, realName: $realName, imageUrl: $imageUrl}';
   }
 
-
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-          other is SuperheroInfo && runtimeType == other.runtimeType &&
-              id == other.id && name == other.name &&
-              realName == other.realName && imageUrl == other.imageUrl;
+      other is SuperheroInfo &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          name == other.name &&
+          realName == other.realName &&
+          imageUrl == other.imageUrl;
 
   @override
   int get hashCode =>
