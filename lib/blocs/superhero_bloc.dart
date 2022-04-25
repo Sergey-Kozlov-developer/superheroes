@@ -15,6 +15,8 @@ class SuperheroBloc {
 
   final superheroSubject = BehaviorSubject<Superhero>();
 
+  final superheroPageStateSubject = BehaviorSubject<SuperheroPageState>();
+
   StreamSubscription? getFromFavoritesSubscription;
   StreamSubscription? requestSubscription;
   StreamSubscription? addToFavoriteSubscription;
@@ -37,9 +39,12 @@ class SuperheroBloc {
       (superhero) {
         if (superhero != null) {
           superheroSubject.add(superhero);
+          superheroPageStateSubject.add(SuperheroPageState.loaded);
+        } else {
+          superheroPageStateSubject.add(SuperheroPageState.loading);
         }
         // вызов requestSuperhero если данные устарели и их надо обновить
-        requestSuperhero();
+        requestSuperhero(superhero != null);
       },
       onError: (error, stackTrace) =>
           print("Error happened in requestSubscription: $error, $stackTrace"),
@@ -87,12 +92,16 @@ class SuperheroBloc {
   // КОНЕЦ ИЗБРАННОГО
 
   // поиск на сервере
-  void requestSuperhero() {
+  void requestSuperhero(final bool isInFavorites) {
     requestSubscription?.cancel();
     // слушатель поиска
     requestSubscription = request().asStream().listen((superhero) {
       superheroSubject.add(superhero);
+      superheroPageStateSubject.add(SuperheroPageState.loaded);
     }, onError: (error, stackTrace) {
+      if(!isInFavorites){
+        superheroPageStateSubject.add(SuperheroPageState.error);
+      }
       print("Error happened in requestSubscription: $error, $stackTrace");
     });
   }
@@ -124,7 +133,10 @@ class SuperheroBloc {
   }
 
   // Stream c супергероем
-  Stream<Superhero> observeSuperhero() => superheroSubject;
+  Stream<Superhero> observeSuperhero() => superheroSubject.distinct();
+
+
+  Stream<SuperheroPageState> observeSuperheroPageState() => superheroPageStateSubject.distinct();
 
   void dispose() {
     client?.close();
@@ -135,5 +147,8 @@ class SuperheroBloc {
     getFromFavoritesSubscription?.cancel();
 
     superheroSubject.close();
+    superheroPageStateSubject.close();
   }
 }
+
+enum SuperheroPageState { loading, loaded, error }

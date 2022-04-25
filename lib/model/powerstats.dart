@@ -42,8 +42,35 @@ class Powerstats {
   return intValue/100;
   }
 
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is Powerstats &&
+          runtimeType == other.runtimeType &&
+          intelligence == other.intelligence &&
+          strength == other.strength &&
+          speed == other.speed &&
+          durability == other.durability &&
+          power == other.power &&
+          combat == other.combat;
+
+  @override
+  int get hashCode =>
+      intelligence.hashCode ^
+      strength.hashCode ^
+      speed.hashCode ^
+      durability.hashCode ^
+      power.hashCode ^
+      combat.hashCode;
+
   factory Powerstats.fromJson(final Map<String, dynamic> json) =>
       _$PowerstatsFromJson(json);
 
   Map<String, dynamic> toJson() => _$PowerstatsToJson(this);
+
+  @override
+  String toString() {
+    return 'Powerstats{intelligence: $intelligence, strength: $strength, speed: $speed, durability: $durability, power: $power, combat: $combat}';
+  }
 }
